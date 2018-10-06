@@ -28,20 +28,18 @@ import bokeh.plotting
 import bokeh.io
 
 bokeh.io.output_notebook()
+alt.data_transformers.enable('json')
 # -
 
-# Frame rate of 28 frames per second. 
-# The interpixel distance for this experiment was 0.08 millimeters.
+# ### Problem 1.2 (Beetle Hypnotists)
 
-# You task in this problem is to extract records of interest out of the tidy data frame containing the data from the experiment, perform calculations on the data, and make informative plots.
-#
 # a) The columns x_coord and y_coord give the coordinates of the ant's body parts in units of pixels. Create a column 'x (mm)' and a column 'y (mm)' in the data frame that has the coordinates in units of millimeters.
 #
 # b) Make a plot displaying the position over time of the thorax of an ant or ants placed in an area with a Dalotia beetle and position over time of an ant or ants with a Sceptobius beetle. I am intentionally not giving more specification for your plot. You need to make decisions about how to effectively extract and display the data. Think carefully about your viz. This is in many ways how you let your data speak. You could make a plot for a single ant from each genus, or for many. You will also probably need to refer to the Altair or Bokeh documentation to specify the plot as you wish.
 #
 # c) From this quick, exploratory analysis, what would you say about the relative activities of ants with Dalotia versus Sceptobius rove beetles?
-#
-#
+
+# a) Given the x and y coordinates of the ant's body parts in units of pixels, we want to create two columns 'x (mm)' and 'y (mm)' with coordinates in millimeters. To do this, we know that the interpixel distance is 0.08 millimeters. Since the interpixel distance is equal to the length of one pixel, we can simply multiply the coordinates in pixels by the interpixel distance to get the coordinates in millimeters.
 
 # Read in the data
 df = pd.read_csv('../data/ant_joint_locations.csv', comment='#')
@@ -54,6 +52,7 @@ df.head()
 ipix = 0.08
 df['x (mm)'] = df['x_coord'] * ipix
 df['y (mm)'] = df['y_coord'] * ipix
+df['time (ms)'] = df['frame'] / 28
 # -
 
 df.head()
@@ -65,21 +64,87 @@ df[df['y (mm)'] < 0]
 
 # Exclude data points where likelihood is 0.
 
-df[df['likelihood'] == 0]
+# +
+# not necessary
+# df[df['likelihood'] == 0]
 
-df1 = df[df['likelihood'] != 0]
+# +
+#df1 = df[df['likelihood'] != 0]
 
-df1.head()
+# +
+#df1.head()
 
-df1[df1['x (mm)'] < 0]
+# +
+#df1[df1['x (mm)'] < 0]
+# -
 
-df_thorax = df[(df['bodypart'] == 'thorax') & (df['likelihood'] != 0)]
+df_thorax = df[(df['bodypart'] == 'thorax')]
 
-df_thorax['likelihood'].unique()
+df_thorax.head()
+
+# Plot with altair (attempt 2)
+alt.Chart(df_thorax[df_thorax['ID'] == 1],
+        height=200,
+        width=200
+    ).mark_point(
+        size=5
+    ).encode(
+        x=alt.X('x (mm):Q', 
+            scale=alt.Scale(domain=[0,20])
+            ),
+        y=alt.Y('y (mm):Q', 
+            scale=alt.Scale(domain=[0,20])
+            ),
+        color='frame:Q',
+        opacity=alt.value(0.4)
+    )
+
+# +
+# Plot with altair
+d = alt.Chart(df_thorax[df_thorax['ID'].isin([0,1,2,3,4,5])],
+        height=120,
+        width=120
+    ).mark_point(
+        size=2
+    ).encode(
+        x=alt.X('x (mm):Q', 
+            scale=alt.Scale(domain=[0,20])
+            ),
+        y=alt.Y('y (mm):Q', 
+            scale=alt.Scale(domain=[0,20])
+            ),
+        color='time (ms):Q',
+        opacity=alt.value(0.2)
+    ).facet(
+        row='ID:Q'
+    )
+
+s = alt.Chart(df_thorax[df_thorax['ID'].isin([6,7,8,9,10,11])],
+        height=120,
+        width=120
+    ).mark_point(
+        size=2
+    ).encode(
+        x=alt.X('x (mm):Q', 
+            scale=alt.Scale(domain=[0,20])
+            ),
+        y=alt.Y('y (mm):Q', 
+            scale=alt.Scale(domain=[0,20])
+            ),
+        color='time (ms):Q',
+        opacity=alt.value(0.2)
+    ).facet(
+        row='ID:Q'
+    )
+
+d | s
+# -
+
+# Plotting with Bokeh (attempt 1)
 
 # +
 p = bokeh.plotting.figure(height=450,
-                          width=500)
+                          width=450)
 
 colors = bokeh.palettes.Category20[20]
 # colors
@@ -106,7 +171,7 @@ bokeh.plotting.show(p)
 df_thorax = df[(df['bodypart'] == 'thorax') & (df['likelihood'] != 0)]
 
 p = bokeh.plotting.figure(height=350,
-                          width=400,
+                          width=350,
                           title='Dalotia',
                           x_range=(0, 20), y_range=(0, 20))
 
@@ -126,8 +191,6 @@ for i in range(5,11):
 # show the results
 bokeh.plotting.show(bokeh.layouts.row(p, p2))
 # -
-
-# # need to make sure our plots are on the same scales
 
 # lines are good so then you can see where they go
 # it looks like there's like a problem with segmentation for some parts -- good to look at the data
@@ -179,6 +242,6 @@ s6.line(df_thorax[df_thorax['ID'] == 11]['x (mm)'], df_thorax[df_thorax['ID'] ==
 bokeh.plotting.show(bokeh.layouts.row(s1, s2, s3, s4, s5))
 # -
 
-# The Sceptobious sant eems to stay in some specific region and not move as much as the Dalotia ants. The trace of Dalotia ants covers more of the whole arena, the position seems to be more randomly distributed across the whole arena. 
+# The Sceptobious ant seems to stay in some specific region and not move as much as the Dalotia ants. The trace of Dalotia ants covers more of the whole arena, the position seems to be more randomly distributed across the whole arena. 
 
 #
